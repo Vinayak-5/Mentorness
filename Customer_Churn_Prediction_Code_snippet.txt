@@ -1,0 +1,148 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn import preprocessing
+from sklearn.metrics import accuracy_score
+
+data=pd.read_csv("Customer_Churn.csv")
+data.head()
+data.shape
+
+data.info()
+data=data.drop('customerID',axis=1)
+data['TotalCharges']=pd.to_numeric(data['TotalCharges'],errors='coerce')
+data.isna().sum()
+data.dropna(inplace=True)
+data.isna().sum()
+
+#EDA
+data.describe()
+data['Churn'].value_counts()
+mylabels=["No","Yes"]
+myexplode = [0.2, 0]
+plt.pie(data['Churn'].value_counts(),labels = mylabels, explode = myexplode, shadow = True, autopct='%.1f%%')
+plt.legend(mylabels)
+plt.show()
+
+cols = ['gender','SeniorCitizen',"Partner","Dependents"]
+
+plt.figure(figsize=(20,4))
+
+for i, col in enumerate(cols):
+    ax = plt.subplot(1, len(cols), i+1)
+    sns.countplot(x=str(col),hue = str(col), data=data)
+    ax.set_title(f"{col}")
+
+sns.boxplot(x='Churn', y='MonthlyCharges', data=data)
+
+cols = ['InternetService',"TechSupport","OnlineBackup","Contract"]
+plt.figure(figsize=(14,4))
+for i, col in enumerate(cols):
+    ax = plt.subplot(1, len(cols), i+1)
+    sns.countplot(x ="Churn", hue = str(col), data = data)
+    ax.set_title(f"{col}")
+
+cat_features = data.drop(['TotalCharges','MonthlyCharges','SeniorCitizen','tenure'],axis=1)
+cat_features.head()
+
+#Preprocessing
+le = preprocessing.LabelEncoder()
+label_encoded = cat_features.apply(le.fit_transform)
+label_encoded.head()
+
+num_features = data[['TotalCharges','MonthlyCharges','SeniorCitizen','tenure']]
+final=pd.merge(num_features,label_encoded,left_index=True,right_index=True)
+
+from sklearn.model_selection import train_test_split
+X = final.drop(['Churn'],axis=1)
+Y = final['Churn']
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.25, random_state=41)
+col=X.columns
+
+# Standardization
+from sklearn.preprocessing import MinMaxScaler
+min_max_scaler = MinMaxScaler()
+X_train = min_max_scaler.fit_transform(X_train)
+X_test = min_max_scaler.transform(X_test)
+pd.DataFrame(X_train,columns=col)
+
+#Model Build
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.cluster import KMeans
+from sklearn.svm import SVC
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+
+# RandomForest
+model = RandomForestClassifier()
+model.fit(X_train, Y_train)
+predict = model.predict(X_test)
+accuracy = accuracy_score(Y_test, predict)
+# Evaluate the performance
+print(classification_report(Y_test, predict))
+print(f"RandomForest Accuracy: {accuracy}")
+print()
+# Generate the confusion matrix
+cm = confusion_matrix(Y_test, predict)
+print("Confusion Matrix:")
+print(pd.DataFrame(cm))
+print("\n\n")
+
+# DecisionTree
+model = DecisionTreeClassifier(criterion="gini", random_state=42,max_depth=23, min_samples_leaf=5)
+model.fit(X_train, Y_train)
+predict = model.predict(X_test)
+accuracy = accuracy_score(Y_test, predict)
+# Evaluate the performance
+print(classification_report(Y_test, predict))
+print(f"DecisionTree Accuracy: {accuracy}")
+print()
+# Generate the confusion matrix
+cm = confusion_matrix(Y_test, predict)
+print("Confusion Matrix:")
+print(pd.DataFrame(cm))
+
+# SVM
+svm_classifier = SVC(kernel='rbf', gamma='scale', random_state=42)
+model.fit(X_train, Y_train)
+predict = model.predict(X_test)
+accuracy = accuracy_score(Y_test, predict)
+# Evaluate the performance
+print(classification_report(Y_test, predict))
+print(f"SVM Accuracy: {accuracy}")
+print()
+# Generate the confusion matrix
+cm = confusion_matrix(Y_test, predict)
+print("Confusion Matrix:")
+print(pd.DataFrame(cm))
+print("\n\n")
+
+# Logistic
+model = LogisticRegression(random_state=42)
+model.fit(X_train, Y_train)
+predict = model.predict(X_test)
+accuracy = accuracy_score(Y_test, predict)
+# Evaluate the performance
+print(classification_report(Y_test, predict))
+print(f"Logistic Accuracy: {accuracy}")
+print()
+# Generate the confusion matrix
+cm = confusion_matrix(Y_test, predict)
+print("Confusion Matrix:")
+print(pd.DataFrame(cm))
+
+X= pd.DataFrame(X_test[0:10],columns=col)
+Y= pd.DataFrame(Y_test[0:10])
+print(X,Y)
+
+#Prediction
+model = LogisticRegression(random_state=42)
+model.fit(X, Y)
+predict = model.predict(X)
+actual=pd.DataFrame(Y)
+actual = actual.reset_index(drop=True)
+predicted=pd.DataFrame(predict,columns=["Predicted"])
+predicted = predicted.reset_index(drop=True)
+pd.concat([actual, predicted], axis=1)
